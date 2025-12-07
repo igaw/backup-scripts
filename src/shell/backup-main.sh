@@ -272,7 +272,7 @@ run_backup() {
 
 	mkdir -p "$SNAP_PARENT"
 
-	local snap_path
+	# Declare snap_path as global for use in cleanup_snapshot
 	snap_path=""
 
 	if [[ $test_mode -eq 1 ]]; then
