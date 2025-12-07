@@ -130,7 +130,7 @@ EOF
 vlog "Copying .msmtprc to $REMOTE_HOST:$REMOTE_HOME/.msmtprc"
 scp "$MSMTP_LOCAL" root@"$REMOTE_HOST":"$REMOTE_HOME/.msmtprc"
 # shellcheck disable=SC2029
-ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER $REMOTE_HOME/.msmtprc\" && chmod 600 \"$REMOTE_HOME/.msmtprc\""
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_HOME/.msmtprc\" && chmod 600 \"$REMOTE_HOME/.msmtprc\""
 rm -f "$MSMTP_LOCAL"
 
 # --- Create systemd directories on remote ---
