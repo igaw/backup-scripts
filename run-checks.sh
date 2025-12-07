@@ -36,10 +36,10 @@ run_shellcheck() {
 run_shfmt() {
 	if ((fix_mode)); then
 		echo "Reformatting shell scripts with shfmt..."
-		find . -type f -name '*.sh' -print0 | xargs -0 shfmt -w
+		find . -type f -name '*.sh' ! -path './tests/*' -print0 | xargs -0 shfmt -w
 	else
 		echo "Running shfmt..."
-		find . -type f -name '*.sh' -print0 | xargs -0 shfmt -d
+		find . -type f -name '*.sh' ! -path './tests/*' -print0 | xargs -0 shfmt -d
 	fi
 }
 
