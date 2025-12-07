@@ -1,56 +1,92 @@
 #!/usr/bin/env bash
-set -euo pipefail 
+set -euo pipefail
 
-# Explenation what this script does:
-# it copies backup scripts to a remote host and setups a systemd timer to run the backup script periodically.
+# Explanation: This script copies backup scripts to a remote host and sets up a systemd timer to run the backup script periodically.
+# It connects as root to the remote host and installs the backup under the specified user (default: backup).
+# It creates necessary directories, systemd service and timer units, enables and starts the timer.
 
-# technical details:
-# the script assumes it connects as root to the remote host and installs the backup under the user backup
-# it creates the necessary directories if they do not exist
-# it creates a systemd service and timer unit under the user backup to run the backup script periodically
-# it enables and starts the timer unit 
+# --- Argument parsing ---
+usage() {
+    echo "Usage: $0 [-u user] [-v] REMOTE_HOST"
+    echo "  -u user      User to install under on remote host (default: backup)"
+    echo "  -v           Verbose output"
+    echo "  REMOTE_HOST  (required) Hostname or IP of the remote server"
+    exit 1
+}
 
-# TODO add argument parser , add  verbose option
-# TODO non optional argument is the remote host name
-# TODO add verbose logging
+VERBOSE=0
+INSTALL_USER="backup"
+while getopts ":u:v" opt; do
+  case $opt in
+    u) INSTALL_USER="$OPTARG" ;;
+    v) VERBOSE=1 ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND -1))
+
+if [[ $# -ne 1 ]]; then
+    usage
+fi
+REMOTE_HOST="$1"
 
 # --- Configuration ---
-# TODO show the defaults before running the scripts and ask if they are correct before continuing.
-# TODO add default user to install
-BIN_DIR="$HOME/bin"
+BIN_DIR="/home/$INSTALL_USER/bin"
 SCRIPT_NAME="sync-borg-and-nearlyone.sh"
-SYSTEMD_DIR="$HOME/.config/systemd/user"
+SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 SERVICE_FILE="$SYSTEMD_DIR/backup-sync.service"
 TIMER_FILE="$SYSTEMD_DIR/backup-sync.timer"
-LOG_FILE="$HOME/backup-sync.log"
+LOG_FILE="/home/$INSTALL_USER/backup-sync.log"
 
-
-echo "🔧 Installing backup script and systemd timer for user: $(whoami)"
-
-# --- Create directories ---
-mkdir -p "$BIN_DIR" "$SYSTEMD_DIR"
-
-# --- Install the main backup script ---
-#  TODO  copy script with name SCRIPT_NAME to remote server
-
-
-echo "✅ Backup script and systemd units installed."
-
-# --- Check for user systemd bus ---
-if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
-    echo "⚠️  User systemd bus not found. Please run this script in a login shell."
-    echo "    Example:"
-    echo "        sudo -u backup -i bash /home/backup/setup-archive-tasks-v3.sh"
-    echo "    Then run manually:"
-    echo "        systemctl --user daemon-reload"
-    echo "        systemctl --user enable --now backup-sync.timer"
-    exit 0
+# --- Show defaults and confirm ---
+echo "Configuration:"
+echo "  Remote host:     $REMOTE_HOST"
+echo "  Install user:    $INSTALL_USER"
+echo "  Script name:     $SCRIPT_NAME"
+echo "  Bin dir:         $BIN_DIR"
+echo "  Systemd dir:     $SYSTEMD_DIR"
+echo "  Log file:        $LOG_FILE"
+echo
+read -p "Continue with these settings? [y/N]: " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
 fi
 
-# --- Reload user systemd and enable timer ---
-systemctl --user daemon-reload
-systemctl --user enable --now backup-sync.timer
+# --- Verbose logging function ---
+vlog() {
+    if [[ $VERBOSE -eq 1 ]]; then
+        echo "[VERBOSE] $*"
+    fi
+}
 
-echo "✅ User systemd timer enabled."
-echo "🪶 Logs will be written to: $LOG_FILE"
-systemctl --user list-timers --all | grep backup-sync || true
+echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
+
+# --- Copy script to remote server ---
+vlog "Copying $SCRIPT_NAME to $REMOTE_HOST:$BIN_DIR/"
+ssh root@"$REMOTE_HOST" "mkdir -p '$BIN_DIR'"
+scp "$(dirname "$0")/$SCRIPT_NAME" root@"$REMOTE_HOST":"$BIN_DIR/"
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER '$BIN_DIR/$SCRIPT_NAME' && chmod 700 '$BIN_DIR/$SCRIPT_NAME'"
+
+# --- Create systemd directories on remote ---
+vlog "Creating systemd user dir $SYSTEMD_DIR on $REMOTE_HOST"
+ssh root@"$REMOTE_HOST" "mkdir -p '$SYSTEMD_DIR' && chown -R $INSTALL_USER:$INSTALL_USER '/home/$INSTALL_USER/.config'"
+
+# --- Copy systemd unit files (assume they exist locally) ---
+for unit in backup-sync.service backup-sync.timer; do
+    vlog "Copying $unit to $REMOTE_HOST:$SYSTEMD_DIR/"
+    scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$SYSTEMD_DIR/"
+    ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER '$SYSTEMD_DIR/$unit'"
+done
+
+# --- Enable and start timer as the install user ---
+vlog "Enabling and starting timer on $REMOTE_HOST as $INSTALL_USER"
+ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
+    export XDG_RUNTIME_DIR="/run/user/$(id -u $INSTALL_USER)"
+    systemctl --user daemon-reload
+    systemctl --user enable --now backup-sync.timer
+    systemctl --user list-timers --all | grep backup-sync || true
+'"
+
+echo "✅ Backup script and systemd units installed and timer enabled on $REMOTE_HOST."
+echo "🪶 Logs will be written to: $LOG_FILE on $REMOTE_HOST."
