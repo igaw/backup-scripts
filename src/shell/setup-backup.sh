@@ -98,11 +98,14 @@ vlog "Creating systemd user dir $SYSTEMD_DIR on $REMOTE_HOST"
 ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$INSTALL_USER '/home/$INSTALL_USER/.config'"
 
 # --- Copy systemd unit files (assume they exist locally) ---
+
+# Use remote systemd dir based on INSTALL_USER
+REMOTE_SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 for unit in backup-sync.service backup-sync.timer; do
-	vlog "Copying $unit to $REMOTE_HOST:$SYSTEMD_DIR/"
-	scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$SYSTEMD_DIR/"
+	vlog "Copying $unit to $REMOTE_HOST:$REMOTE_SYSTEMD_DIR/"
+	scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
 	# shellcheck disable=SC2029
-	ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$SYSTEMD_DIR/$unit\""
+	ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_SYSTEMD_DIR/$unit\""
 done
 
 # --- Enable and start timer as the install user ---
