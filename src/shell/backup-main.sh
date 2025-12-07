@@ -135,15 +135,15 @@ create_snapshot() {
 		snap_name="backup-rsync-$(date +%Y%m%d-%H%M%S)"
 		snap_path="$SNAP_PARENT/$snap_name"
 
-		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path"
+		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
 		if ! btrfs subvolume snapshot -r "$SNAP_PARENT" "$snap_path" >/dev/null 2>&1; then
-			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $SNAP_PARENT"
+			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $SNAP_PARENT" >&2
 			continue
 		fi
 
-		log "🔍 Checking snapshot for Borg locks..."
+		log "🔍 Checking snapshot for Borg locks..." >&2
 		if snapshot_has_locks "$snap_path"; then
-			log "🔒 Locks found — removing snapshot and retrying in $RETRY_DELAY seconds."
+			log "🔒 Locks found — removing snapshot and retrying in $RETRY_DELAY seconds." >&2
 			sudo btrfs subvolume delete "$snap_path" >/dev/null
 			sleep "$RETRY_DELAY"
 			continue
