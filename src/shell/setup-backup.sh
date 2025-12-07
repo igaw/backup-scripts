@@ -170,3 +170,14 @@ ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
 
 echo "✅ Backup script and systemd units installed and timer enabled on $REMOTE_HOST."
 echo "🪶 Logs will be written to: $LOG_FILE on $REMOTE_HOST."
+
+# --- Add sudoers file for backup user to allow passwordless btrfs subvolume commands ---
+SUDOERS_TMP="$(mktemp)"
+cat > "$SUDOERS_TMP" <<EOF
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete /home/$INSTALL_USER/backup-snapshots/*
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup-snapshots/*
+EOF
+echo "Installing sudoers file for $INSTALL_USER on $REMOTE_HOST..."
+scp "$SUDOERS_TMP" root@"$REMOTE_HOST":/etc/sudoers.d/backup-snapshots
+ssh root@"$REMOTE_HOST" "chmod 0440 /etc/sudoers.d/backup-snapshots"
+rm -f "$SUDOERS_TMP"
