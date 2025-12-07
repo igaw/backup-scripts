@@ -4,32 +4,15 @@ set -euo pipefail
 ############################################
 #               CONFIGURATION              #
 ############################################
-TN_HOST="truenas.lan"
-TN_TOKEN=""
-
-SNAP_PARENT="/home/backup/backup-snapshots" # Btrfs subvolume parent
-REMOTE_HOST="backup@$TN_HOST"
-REMOTE_BASE="/data/repos"
-SSH_OPTS="-p 5522 -i ~/.ssh/id_backup-nearlyone_ed25519"
-
-RETRY_DELAY=120
-MAX_RETRIES=10
-LOCAL_KEEP=10
-
-# nearlyone encrypted backup
-NEARLYONE_SRC="$HOME/nearlyone"
-AGE_BIN="$(command -v age || true)"
-AGE_RECIPIENT_FILE="$HOME/.ssh/id_backup-nearlyone_ed25519.pub"
-NEARLYONE_REMOTE_BASE="backup@truenas.lan:/data"
-
-# Logging
-LOGFILE="$HOME/backup-sync.log"
-
-# Email notifications (set EMAIL_TO to enable)
-EMAIL_TO="wagi@monom.org"
-EMAIL_FROM="backup@backup.lan"
-EMAIL_SUBJECT_OK="Backup completed successfully"
-EMAIL_SUBJECT_FAIL="Backup FAILED"
+# Source config from XDG_CONFIG_HOME or fallback to ~/.config
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/backup-scripts/config"
+if [[ -f "$CONFIG_FILE" ]]; then
+	# shellcheck source=/dev/null
+	source "$CONFIG_FILE"
+else
+	echo "Config file $CONFIG_FILE not found."
+	exit 1
+fi
 
 ############################################
 #                LOGGING                   #

@@ -83,6 +83,15 @@ scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$BIN_DIR/"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$BIN_DIR/$SCRIPT_NAME\" && chmod 700 \"$BIN_DIR/$SCRIPT_NAME\""
 
+# --- Copy config to remote XDG_CONFIG_HOME ---
+REMOTE_CONFIG_DIR="/home/$INSTALL_USER/.config/backup-scripts"
+vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
+scp "$(dirname "$0")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
+
 # --- Create systemd directories on remote ---
 vlog "Creating systemd user dir $SYSTEMD_DIR on $REMOTE_HOST"
 # shellcheck disable=SC2029
