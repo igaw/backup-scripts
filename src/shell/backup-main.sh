@@ -127,8 +127,8 @@ rotate_local_snapshots() {
 create_snapshot() {
 	local snap_name snap_path
 
-	if ! btrfs subvolume show "$SNAP_SRC" >/dev/null 2>&1; then
-		fail_and_exit "SNAP_SRC ($SNAP_SRC) is not a valid Btrfs subvolume."
+	if ! sudo btrfs subvolume show "$SNAP_PARENT" >/dev/null 2>&1; then
+		fail_and_exit "SNAP_PARENT ($SNAP_PARENT) is not a valid btrfs subvolume."
 	fi
 
 	for attempt in $(seq 1 "$MAX_RETRIES"); do
@@ -136,8 +136,8 @@ create_snapshot() {
 		snap_path="$SNAP_PARENT/$snap_name"
 
 		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path"
-		if ! btrfs subvolume snapshot -r "$SNAP_SRC" "$snap_path" >/dev/null 2>&1; then
-			log "❌ ERROR: Not a Btrfs subvolume or failed to create snapshot: $SNAP_SRC"
+		if ! btrfs subvolume snapshot -r "$SNAP_PARENT" "$snap_path" >/dev/null 2>&1; then
+			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $SNAP_PARENT"
 			continue
 		fi
 
@@ -153,7 +153,7 @@ create_snapshot() {
 		return 0
 	done
 
-	fail_and_exit "Could not create clean Btrfs snapshot after $MAX_RETRIES attempts."
+	fail_and_exit "Could not create clean btrfs snapshot after $MAX_RETRIES attempts."
 }
 
 ############################################

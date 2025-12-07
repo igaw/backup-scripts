@@ -211,8 +211,7 @@ echo "🪶 Logs will be written to: $LOG_FILE on $REMOTE_HOST."
 SUDOERS_TMP="$(mktemp)"
 cat >"$SUDOERS_TMP" <<EOF
 $INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete /home/$INSTALL_USER/backup-snapshots/*
-$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup-snapshots/*
-$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup/backup-snapshots/*
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup-snapshots
 EOF
 echo "Installing sudoers file for $INSTALL_USER on $REMOTE_HOST..."
 scp "$SUDOERS_TMP" root@"$REMOTE_HOST":/etc/sudoers.d/backup-snapshots
