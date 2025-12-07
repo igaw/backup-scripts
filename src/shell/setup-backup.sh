@@ -154,11 +154,11 @@ rm -rf "$LOCAL_SYSTEMD_DIR"
 vlog "Enabling and starting timer on $REMOTE_HOST as $INSTALL_USER"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
-# shellcheck disable=SC2046
-    export XDG_RUNTIME_DIR=\"/run/user/$(id -u \""$INSTALL_USER"\")\"
-    systemctl --user daemon-reload
-    systemctl --user enable --now backup-sync.timer
-    systemctl --user list-timers --all | grep backup-sync || true
+# shellcheck disable=SC2046,SC2086
+	export XDG_RUNTIME_DIR=\"/run/user/$(id -u "$INSTALL_USER")\"
+	systemctl --user daemon-reload
+	systemctl --user enable --now backup-sync.timer
+	systemctl --user list-timers --all | grep backup-sync || true
 '"
 
 echo "✅ Backup script and systemd units installed and timer enabled on $REMOTE_HOST."
