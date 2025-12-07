@@ -90,7 +90,7 @@ create_snapshot() {
 		snap_path="$SNAP_PARENT/$snap_name"
 
 		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path"
-		btrfs subvolume snapshot -r /home/backup "$snap_path" >/dev/null
+		btrfs subvolume snapshot -r "$SNAP_SRC" "$snap_path" >/dev/null
 
 		log "🔍 Checking snapshot for Borg locks..."
 		if snapshot_has_locks "$snap_path"; then
