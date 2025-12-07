@@ -196,6 +196,19 @@ create_remote_snapshot() {
 ############################################
 
 run_backup() {
+	local skip_encrypted_tar=0
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--skip-encrypted-tar)
+			skip_encrypted_tar=1
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
 	log "🚀 Backup started"
 
 	mkdir -p "$SNAP_PARENT"
@@ -205,7 +218,11 @@ run_backup() {
 
 	rotate_local_snapshots
 	sync_all_borg_repos "$snap_path"
-	backup_encrypted_tar
+	if [[ $skip_encrypted_tar -eq 0 ]]; then
+		backup_encrypted_tar
+	else
+		log "🔕 Skipping encrypted tar backup step (--skip-encrypted-tar)"
+	fi
 	create_remote_snapshot
 
 	log "✅ Backup complete"
@@ -216,4 +233,4 @@ run_backup() {
 
 #email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."
 
-run_backup
+run_backup "$@"
