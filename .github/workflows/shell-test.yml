@@ -1,0 +1,25 @@
+name: Shell Tests
+
+on:
+  push:
+    paths:
+      - '**.sh'
+  pull_request:
+    paths:
+      - '**.sh'
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Run bats tests
+        run: |
+          if find tests -type f -name '*.sh' -print0 | grep -q .; then
+            find tests -type f -name '*.sh' -print0 | xargs -0 -n 1 bats
+          else
+            echo "No bats test files found."
+          fi
