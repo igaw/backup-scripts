@@ -106,7 +106,7 @@ TIMER_FILE="$LOCAL_SYSTEMD_DIR/backup-sync.timer"
 
 cat >"$SERVICE_FILE" <<EOF
 [Unit]
-Description=Run Borg + Nearlyone backup sync
+Description=Run Backup Scripts
 Wants=network-online.target
 After=network-online.target
 
@@ -125,7 +125,7 @@ EOF
 
 cat >"$TIMER_FILE" <<EOF
 [Unit]
-Description=Daily Borg + Nearlyone backup
+Description=Daily BAckup Scripts Execution
 
 [Timer]
 OnCalendar=03:00
