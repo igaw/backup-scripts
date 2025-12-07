@@ -197,15 +197,20 @@ create_remote_snapshot() {
 
 run_backup() {
 	local skip_encrypted_tar=0
+	local test_mode=0
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--skip-encrypted-tar)
-			skip_encrypted_tar=1
-			shift
-			;;
-		*)
-			shift
-			;;
+			--skip-encrypted-tar)
+				skip_encrypted_tar=1
+				shift
+				;;
+			--test-mode)
+				test_mode=1
+				shift
+				;;
+			*)
+				shift
+				;;
 		esac
 	done
 
@@ -213,10 +218,26 @@ run_backup() {
 
 	mkdir -p "$SNAP_PARENT"
 
+
 	local snap_path
+	snap_path=""
+
+	if [[ $test_mode -eq 1 ]]; then
+		cleanup_snapshot() {
+			if [[ -n "$snap_path" && -d "$snap_path" ]]; then
+				log "🧹 Cleaning up test snapshot: $snap_path"
+				sudo btrfs subvolume delete "$snap_path" >/dev/null || true
+			fi
+		}
+		trap cleanup_snapshot EXIT INT TERM
+	fi
+
 	snap_path=$(create_snapshot)
 
-	rotate_local_snapshots
+	if [[ $test_mode -eq 0 ]]; then
+		rotate_local_snapshots
+	fi
+
 	sync_all_borg_repos "$snap_path"
 	if [[ $skip_encrypted_tar -eq 0 ]]; then
 		backup_encrypted_tar
@@ -224,6 +245,11 @@ run_backup() {
 		log "🔕 Skipping encrypted tar backup step (--skip-encrypted-tar)"
 	fi
 	create_remote_snapshot
+
+	if [[ $test_mode -eq 1 ]]; then
+		cleanup_snapshot
+		trap - EXIT INT TERM
+	fi
 
 	log "✅ Backup complete"
 	email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."
