@@ -11,6 +11,15 @@ else
 	exit 1
 fi
 
+# Source mail configuration for msmtp
+MAIL_CONF="$(dirname "$0")/../../mail.conf"
+if [[ -f "$MAIL_CONF" ]]; then
+	# shellcheck source=/dev/null
+	source "$MAIL_CONF"
+else
+	echo "Mail config $MAIL_CONF not found. Using defaults for msmtp."
+fi
+
 # Explanation: This script copies backup scripts to a remote host and sets up a systemd timer to run the backup script periodically.
 # It connects as root to the remote host and installs the backup under the specified user (default: backup).
 # It creates necessary directories, systemd service and timer units, enables and starts the timer.
@@ -99,9 +108,29 @@ ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/zfs
 vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
-scp "$(dirname "$0")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
+scp "$(dirname \"$0\")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
+
+# --- Install .msmtprc for backup user ---
+MSMTP_LOCAL="$(mktemp)"
+cat > "$MSMTP_LOCAL" <<EOF
+defaults
+auth            on
+tls             on
+logfile         ~/.msmtp_default.log
+
+account         ${MSMTP_ACCOUNT}
+host            ${MSMTP_HOST}
+from            ${MSMTP_FROM}
+user            ${MSMTP_USER}
+port            ${MSMTP_PORT}
+password        ${MSMTP_PASSWORD}
+EOF
+vlog "Copying .msmtprc to $REMOTE_HOST:$REMOTE_HOME/.msmtprc"
+scp "$MSMTP_LOCAL" root@"$REMOTE_HOST":"$REMOTE_HOME/.msmtprc"
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_HOME/.msmtprc\" && chmod 600 \"$REMOTE_HOME/.msmtprc\""
+rm -f "$MSMTP_LOCAL"
 
 # --- Create systemd directories on remote ---
 vlog "Creating systemd user dir $REMOTE_SYSTEMD_DIR on $REMOTE_HOST"
