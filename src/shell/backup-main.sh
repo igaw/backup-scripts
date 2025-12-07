@@ -16,8 +16,13 @@ EOF
 
 set -euo pipefail
 
+
 # Global status variable to track script success
 SCRIPT_STATUS=0
+# Buffer for current run log
+RUN_LOG=""
+# Start time for this run
+RUN_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
 
 ############################################
 #               CONFIGURATION              #
@@ -44,23 +49,34 @@ fi
 log() {
 	local t
 	t=$(date '+%Y-%m-%d %H:%M:%S')
-	echo "$t  $*" | tee -a "$LOGFILE"
+	local line="$t  $*"
+	echo "$line" | tee -a "$LOGFILE"
+	RUN_LOG+="$line\n"
 }
 
 email_notify() {
-	local subject="$1"
-	local body="$2"
+	       local subject="$1"
+	       local body="$2"
 
-	[[ -z "${EMAIL_TO}" ]] && return 0
+	       [[ -z "${EMAIL_TO}" ]] && return 0
 
-	# Compose the email
-	{
-		echo "From: ${EMAIL_FROM}"
-		echo "To: ${EMAIL_TO}"
-		echo "Subject: ${subject}"
-		echo
-		echo "$body"
-	} | msmtp --from="${EMAIL_FROM}" "$EMAIL_TO"
+	       # Compose the email
+	       {
+		       echo "From: ${EMAIL_FROM}"
+		       echo "To: ${EMAIL_TO}"
+		       echo "Subject: ${subject}"
+		       echo
+		       echo "$body"
+		       echo
+		       echo "Run started: $RUN_START_TIME"
+		       echo "Run ended:   $(date '+%Y-%m-%d %H:%M:%S')"
+		       echo
+		       echo "Log output for this run:"
+		       echo "----------------------------------------"
+		       # Print only the current run's log
+		       printf "%s" "$RUN_LOG"
+		       echo "----------------------------------------"
+	       } | msmtp --from="${EMAIL_FROM}" "$EMAIL_TO"
 }
 
 fail_and_exit() {
