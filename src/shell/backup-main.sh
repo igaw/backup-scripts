@@ -293,13 +293,15 @@ run_backup() {
 	created_snap_path=""
 	if ! created_snap_path=$(create_snapshot); then
 		# create_snapshot already logs and exits with fail_and_exit
+		snap_path=""
 		return 1
 	fi
-	snap_path="$created_snap_path"
-
-	# Only proceed if snap_path is a valid directory
-	if [[ ! -d "$snap_path" ]]; then
-		fail_and_exit "Snapshot creation failed or did not produce a valid directory: $snap_path"
+	# Only set snap_path if it is a valid directory
+	if [[ -d "$created_snap_path" ]]; then
+		snap_path="$created_snap_path"
+	else
+		snap_path=""
+		fail_and_exit "Snapshot creation failed or did not produce a valid directory: $created_snap_path"
 	fi
 
 	if [[ $test_mode -eq 0 ]]; then
