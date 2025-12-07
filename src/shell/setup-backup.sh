@@ -41,10 +41,14 @@ fi
 REMOTE_HOST="$1"
 
 # --- Configuration ---
-BIN_DIR="/home/$INSTALL_USER/bin"
+# Use XDG_CONFIG_HOME or fallback to ~/.config
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/home/$INSTALL_USER/.config}"
+
+# Set defaults, allow override from project.conf
+BIN_DIR="${BIN_DIR:-/home/$INSTALL_USER/.local/bin}"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
-SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
-LOG_FILE="/home/$INSTALL_USER/backup-sync.log"
+SYSTEMD_DIR="${SYSTEMD_DIR:-$XDG_CONFIG_HOME/systemd/user}"
+LOG_FILE="${LOG_FILE:-/home/$INSTALL_USER/backup-sync.log}"
 
 # --- Show defaults and confirm ---
 echo "Configuration:"
