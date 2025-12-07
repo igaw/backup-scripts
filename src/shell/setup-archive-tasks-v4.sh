@@ -294,4 +294,3 @@ systemctl --user enable --now backup-sync.timer
 echo "✅ User systemd timer enabled."
 echo "🪶 Logs will be written to: $LOG_FILE"
 systemctl --user list-timers --all | grep backup-sync || true
-
