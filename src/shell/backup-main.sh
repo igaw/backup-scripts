@@ -137,8 +137,8 @@ create_snapshot() {
 		snap_path="$SNAP_PARENT/$snap_name"
 
 		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
-		if ! btrfs subvolume snapshot -r "$SNAP_PARENT" "$snap_path" >/dev/null 2>&1; then
-			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $SNAP_PARENT" >&2
+		if ! btrfs subvolume snapshot -r "$HOME" "$snap_path" >/dev/null 2>&1; then
+			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $HOME" >&2
 			continue
 		fi
 
@@ -150,11 +150,8 @@ create_snapshot() {
 			continue
 		fi
 
-		# Only echo if the snapshot is valid and has no locks
-		if [[ -d "$snap_path" ]]; then
-			echo "$snap_path"
-			return 0
-		fi
+		echo "$snap_path"
+		return 0
 	done
 
 	fail_and_exit "Could not create clean btrfs snapshot after $MAX_RETRIES attempts."
@@ -277,38 +274,28 @@ run_backup() {
 	mkdir -p "$SNAP_PARENT"
 
 	# Declare snap_path as global for use in cleanup_snapshot
-	snap_path=""
+	global_snap_path=""
 
 	if [[ $test_mode -eq 1 ]]; then
 		cleanup_snapshot() {
-			if [[ -n "$snap_path" && -d "$snap_path" ]]; then
-				log "🧹 Cleaning up test snapshot: $snap_path"
-				sudo btrfs subvolume delete "$snap_path" >/dev/null || true
+			if [[ -n "$global_snap_path" && -d "$global_snap_path" ]]; then
+				log "🧹 Cleaning up test snapshot: $global_snap_path"
+				sudo btrfs subvolume delete "$global_snap_path" >/dev/null || true
 			fi
 		}
 		trap cleanup_snapshot EXIT INT TERM
 	fi
 
-	local created_snap_path
-	created_snap_path=""
-	if ! created_snap_path=$(create_snapshot); then
-		# create_snapshot already logs and exits with fail_and_exit
-		snap_path=""
+	if ! global_snap_path=$(create_snapshot); then
+		fail_and_exit "Snapshot creation failed or did not produce a valid directory: $global_snap_path"
 		return 1
-	fi
-	# Only set snap_path if it is a valid directory
-	if [[ -d "$created_snap_path" ]]; then
-		snap_path="$created_snap_path"
-	else
-		snap_path=""
-		fail_and_exit "Snapshot creation failed or did not produce a valid directory: $created_snap_path"
 	fi
 
 	if [[ $test_mode -eq 0 ]]; then
 		rotate_local_snapshots
 	fi
 
-	sync_all_borg_repos "$snap_path"
+	sync_all_borg_repos "$global_snap_path"
 	if [[ $skip_encrypted_tar -eq 0 ]]; then
 		backup_encrypted_tar
 	else
