@@ -285,7 +285,13 @@ run_backup() {
 		trap cleanup_snapshot EXIT INT TERM
 	fi
 
-	snap_path=$(create_snapshot)
+	local created_snap_path
+	created_snap_path=""
+	if ! created_snap_path=$(create_snapshot); then
+		# create_snapshot already logs and exits with fail_and_exit
+		return 1
+	fi
+	snap_path="$created_snap_path"
 
 	if [[ $test_mode -eq 0 ]]; then
 		rotate_local_snapshots
