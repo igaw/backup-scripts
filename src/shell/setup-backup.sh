@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Source project-wide configuration
+PROJECT_CONF="$(dirname "$0")/../../project.conf"
+if [[ -f "$PROJECT_CONF" ]]; then
+    # shellcheck source=/dev/null
+    source "$PROJECT_CONF"
+else
+    echo "Project config $PROJECT_CONF not found."
+    exit 1
+fi
+
 # Explanation: This script copies backup scripts to a remote host and sets up a systemd timer to run the backup script periodically.
 # It connects as root to the remote host and installs the backup under the specified user (default: backup).
 # It creates necessary directories, systemd service and timer units, enables and starts the timer.
@@ -32,7 +42,7 @@ REMOTE_HOST="$1"
 
 # --- Configuration ---
 BIN_DIR="/home/$INSTALL_USER/bin"
-SCRIPT_NAME="sync-borg-and-nearlyone.sh"
+SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 SERVICE_FILE="$SYSTEMD_DIR/backup-sync.service"
 TIMER_FILE="$SYSTEMD_DIR/backup-sync.timer"
@@ -43,6 +53,7 @@ echo "Configuration:"
 echo "  Remote host:     $REMOTE_HOST"
 echo "  Install user:    $INSTALL_USER"
 echo "  Script name:     $SCRIPT_NAME"
+echo "  Script path:     $SCRIPT_PATH"
 echo "  Bin dir:         $BIN_DIR"
 echo "  Systemd dir:     $SYSTEMD_DIR"
 echo "  Log file:        $LOG_FILE"
@@ -63,9 +74,9 @@ vlog() {
 echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
 
 # --- Copy script to remote server ---
-vlog "Copying $SCRIPT_NAME to $REMOTE_HOST:$BIN_DIR/"
+vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$BIN_DIR/"
 ssh root@"$REMOTE_HOST" "mkdir -p '$BIN_DIR'"
-scp "$(dirname "$0")/$SCRIPT_NAME" root@"$REMOTE_HOST":"$BIN_DIR/"
+scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$BIN_DIR/"
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER '$BIN_DIR/$SCRIPT_NAME' && chmod 700 '$BIN_DIR/$SCRIPT_NAME'"
 
 # --- Create systemd directories on remote ---
