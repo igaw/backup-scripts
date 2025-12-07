@@ -4,11 +4,11 @@ set -euo pipefail
 # Source project-wide configuration
 PROJECT_CONF="$(dirname "$0")/../../project.conf"
 if [[ -f "$PROJECT_CONF" ]]; then
-    # shellcheck source=/dev/null
-    source "$PROJECT_CONF"
+	# shellcheck source=/dev/null
+	source "$PROJECT_CONF"
 else
-    echo "Project config $PROJECT_CONF not found."
-    exit 1
+	echo "Project config $PROJECT_CONF not found."
+	exit 1
 fi
 
 # Explanation: This script copies backup scripts to a remote host and sets up a systemd timer to run the backup script periodically.
@@ -17,26 +17,26 @@ fi
 
 # --- Argument parsing ---
 usage() {
-    echo "Usage: $0 [-u user] [-v] REMOTE_HOST"
-    echo "  -u user      User to install under on remote host (default: backup)"
-    echo "  -v           Verbose output"
-    echo "  REMOTE_HOST  (required) Hostname or IP of the remote server"
-    exit 1
+	echo "Usage: $0 [-u user] [-v] REMOTE_HOST"
+	echo "  -u user      User to install under on remote host (default: backup)"
+	echo "  -v           Verbose output"
+	echo "  REMOTE_HOST  (required) Hostname or IP of the remote server"
+	exit 1
 }
 
 VERBOSE=0
 INSTALL_USER="backup"
 while getopts ":u:v" opt; do
-  case $opt in
-    u) INSTALL_USER="$OPTARG" ;;
-    v) VERBOSE=1 ;;
-    *) usage ;;
-  esac
+	case $opt in
+	u) INSTALL_USER="$OPTARG" ;;
+	v) VERBOSE=1 ;;
+	*) usage ;;
+	esac
 done
-shift $((OPTIND -1))
+shift $((OPTIND - 1))
 
 if [[ $# -ne 1 ]]; then
-    usage
+	usage
 fi
 REMOTE_HOST="$1"
 
@@ -58,15 +58,15 @@ echo "  Log file:        $LOG_FILE"
 echo
 read -r -p "Continue with these settings? [y/N]: " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 1
+	echo "Aborted."
+	exit 1
 fi
 
 # --- Verbose logging function ---
 vlog() {
-    if [[ $VERBOSE -eq 1 ]]; then
-        echo "[VERBOSE] $*"
-    fi
+	if [[ $VERBOSE -eq 1 ]]; then
+		echo "[VERBOSE] $*"
+	fi
 }
 
 echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
@@ -86,10 +86,10 @@ ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$IN
 
 # --- Copy systemd unit files (assume they exist locally) ---
 for unit in backup-sync.service backup-sync.timer; do
-    vlog "Copying $unit to $REMOTE_HOST:$SYSTEMD_DIR/"
-    scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$SYSTEMD_DIR/"
-    # shellcheck disable=SC2029
-    ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$SYSTEMD_DIR/$unit\""
+	vlog "Copying $unit to $REMOTE_HOST:$SYSTEMD_DIR/"
+	scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$SYSTEMD_DIR/"
+	# shellcheck disable=SC2029
+	ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$SYSTEMD_DIR/$unit\""
 done
 
 # --- Enable and start timer as the install user ---
