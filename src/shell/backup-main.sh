@@ -176,7 +176,7 @@ create_remote_snapshot() {
 
 	log "📸 Creating remote ZFS snapshot on TrueNAS..."
 
-	if python3 /home/backup/bin/zfs-snap.py \
+	if python3 "$BIN_DIR/zfs-snap.py" \
 		--host "$TN_HOST" \
 		--token "$TN_TOKEN" \
 		--dataset "$DATASET" \
