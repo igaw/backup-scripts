@@ -152,10 +152,13 @@ rm -rf "$LOCAL_SYSTEMD_DIR"
 
 # --- Enable and start timer as the install user ---
 vlog "Enabling and starting timer on $REMOTE_HOST as $INSTALL_USER"
+# Get remote UID for INSTALL_USER
+# shellcheck disable=SC2029
+REMOTE_UID=$(ssh root@"$REMOTE_HOST" "id -u $INSTALL_USER")
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
 # shellcheck disable=SC2046,SC2086
-	export XDG_RUNTIME_DIR=\"/run/user/$(id -u "$INSTALL_USER")\"
+	export XDG_RUNTIME_DIR=\"/run/user/$REMOTE_UID\"
 	systemctl --user daemon-reload
 	systemctl --user enable --now backup-sync.timer
 	systemctl --user list-timers --all | grep backup-sync || true
