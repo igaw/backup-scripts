@@ -81,8 +81,6 @@ email_notify() {
 fail_and_exit() {
 	log "❌ ERROR: $*"
 	SCRIPT_STATUS=1
-	# Force trap to run immediately for error mail
-	trap - EXIT
 	email_notify "$EMAIL_SUBJECT_FAIL" "$*"
 	exit 1
 }
