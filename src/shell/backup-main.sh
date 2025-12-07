@@ -271,7 +271,14 @@ run_backup() {
 
 	log "🚀 Backup started"
 
-	mkdir -p "$SNAP_PARENT"
+	# Ensure SNAP_PARENT exists as a btrfs subvolume
+	if [[ ! -d "$SNAP_PARENT" ]]; then
+		log "SNAP_PARENT $SNAP_PARENT does not exist, creating as btrfs subvolume."
+		sudo btrfs subvolume create "$SNAP_PARENT"
+	elif ! sudo btrfs subvolume show "$SNAP_PARENT" >/dev/null 2>&1; then
+		log "SNAP_PARENT $SNAP_PARENT exists but is not a btrfs subvolume."
+		fail_and_exit "SNAP_PARENT ($SNAP_PARENT) exists but is not a btrfs subvolume."
+	fi
 
 	# Declare snap_path as global for use in cleanup_snapshot
 	global_snap_path=""
