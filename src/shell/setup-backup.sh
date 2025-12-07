@@ -75,16 +75,21 @@ vlog() {
 
 echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
 
-# --- Copy script to remote server ---
-vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$BIN_DIR/"
+
+# --- Always use remote /home/$INSTALL_USER for all remote paths ---
+REMOTE_HOME="/home/$INSTALL_USER"
+REMOTE_BIN_DIR="$REMOTE_HOME/.local/bin"
+REMOTE_CONFIG_DIR="$REMOTE_HOME/.config/backup-scripts"
+REMOTE_SYSTEMD_DIR="$REMOTE_HOME/.config/systemd/user"
+
+vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$REMOTE_BIN_DIR/"
 # shellcheck disable=SC2029
-ssh root@"$REMOTE_HOST" "mkdir -p \"$BIN_DIR\""
-scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$BIN_DIR/"
+ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_BIN_DIR\""
+scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$REMOTE_BIN_DIR/"
 # shellcheck disable=SC2029
-ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$BIN_DIR/$SCRIPT_NAME\" && chmod 700 \"$BIN_DIR/$SCRIPT_NAME\""
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/$SCRIPT_NAME\" && chmod 700 \"$REMOTE_BIN_DIR/$SCRIPT_NAME\""
 
 # --- Copy config to remote XDG_CONFIG_HOME ---
-REMOTE_CONFIG_DIR="/home/$INSTALL_USER/.config/backup-scripts"
 vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
@@ -93,9 +98,9 @@ scp "$(dirname "$0")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
 
 # --- Create systemd directories on remote ---
-vlog "Creating systemd user dir $SYSTEMD_DIR on $REMOTE_HOST"
+vlog "Creating systemd user dir $REMOTE_SYSTEMD_DIR on $REMOTE_HOST"
 # shellcheck disable=SC2029
-ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$INSTALL_USER '/home/$INSTALL_USER/.config'"
+ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_SYSTEMD_DIR\" && chown -R $INSTALL_USER:$INSTALL_USER '$REMOTE_HOME/.config'"
 
 # --- Copy systemd unit files (assume they exist locally) ---
 
@@ -138,7 +143,6 @@ WantedBy=timers.target
 EOF
 
 # Use remote systemd dir based on INSTALL_USER
-REMOTE_SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 for unit in backup-sync.service backup-sync.timer; do
 	local_file="$LOCAL_SYSTEMD_DIR/$unit"
 	vlog "Copying $unit to $REMOTE_HOST:$REMOTE_SYSTEMD_DIR/"
