@@ -1,0 +1,11 @@
+---
+backup_user: backup
+backup_home: "/home/{{ backup_user }}"
+msmtp_account: default
+msmtp_host: smtp.example.com
+msmtp_from: backup@example.com
+msmtp_user: backup@example.com
+msmtp_port: 587
+msmtp_password: "changeme"
+backup_timer: "03:00"
+backup_logfile: "{{ backup_home }}/backup-sync.log"

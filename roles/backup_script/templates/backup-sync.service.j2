@@ -1,0 +1,16 @@
+[Unit]
+Description=Run Backup Scripts
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ backup_home }}/.local/bin/backup-main.sh
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=no
+StandardOutput=append:{{ backup_logfile }}
+StandardError=append:{{ backup_logfile }}

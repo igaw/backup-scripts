@@ -1,0 +1,3 @@
+{{ backup_user }} ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete {{ backup_home }}/backup/backup-snapshots/*
+{{ backup_user }} ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show {{ backup_home }}/backup/backup-snapshots/*
+{{ backup_user }} ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume create {{ backup_home }}/backup/backup-snapshots

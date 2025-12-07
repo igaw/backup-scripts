@@ -1,0 +1,102 @@
+---
+# Main Ansible tasks for backup_script role
+- name: Ensure backup user exists
+  ansible.builtin.user:
+    name: "{{ backup_user }}"
+    state: present
+    shell: /bin/bash
+
+- name: Ensure required directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0700'
+  loop:
+    - "{{ backup_home }}/.local/bin"
+    - "{{ backup_home }}/.config/backup-scripts"
+    - "{{ backup_home }}/.config/systemd/user"
+    - "{{ backup_home }}/backup/backup-snapshots"
+
+- name: Copy backup script
+  ansible.builtin.copy:
+    src: backup-main.sh
+    dest: "{{ backup_home }}/.local/bin/backup-main.sh"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0700'
+
+- name: Copy zfs-snap.py
+  ansible.builtin.copy:
+    src: zfs-snap.py
+    dest: "{{ backup_home }}/.local/bin/zfs-snap.py"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0700'
+
+- name: Copy backup config
+  ansible.builtin.copy:
+    src: backup-main.conf
+    dest: "{{ backup_home }}/.config/backup-scripts/config"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0600'
+
+- name: Deploy msmtp config
+  ansible.builtin.template:
+    src: msmtprc.j2
+    dest: "{{ backup_home }}/.msmtprc"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0600'
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: backup-sync.service.j2
+    dest: "{{ backup_home }}/.config/systemd/user/backup-sync.service"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0644'
+
+- name: Deploy systemd timer
+  ansible.builtin.template:
+    src: backup-sync.timer.j2
+    dest: "{{ backup_home }}/.config/systemd/user/backup-sync.timer"
+    owner: "{{ backup_user }}"
+    group: "{{ backup_user }}"
+    mode: '0644'
+
+- name: Install sudoers file for btrfs commands
+  ansible.builtin.template:
+    src: sudoers_btrfs.j2
+    dest: "/etc/sudoers.d/backup-snapshots"
+    owner: root
+    group: root
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Reload systemd user daemon
+  ansible.builtin.command: >
+    loginctl enable-linger {{ backup_user }}
+  become: true
+  changed_when: false
+
+- name: Reload systemd user units
+  ansible.builtin.command: >
+    systemctl --user daemon-reload
+  become: true
+  become_user: "{{ backup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('ansible.builtin.pipe', 'id -u ' + backup_user) }}"
+
+- name: Enable and start backup timer
+  ansible.builtin.systemd:
+    name: backup-sync.timer
+    enabled: true
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ backup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('ansible.builtin.pipe', 'id -u ' + backup_user) }}"

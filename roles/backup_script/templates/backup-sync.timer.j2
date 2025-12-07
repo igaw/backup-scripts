@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Backup Scripts Execution
+
+[Timer]
+OnCalendar={{ backup_timer }}
+RandomizedDelaySec=900
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

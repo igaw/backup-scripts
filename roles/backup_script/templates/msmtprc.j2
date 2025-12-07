@@ -1,0 +1,11 @@
+defaults
+auth            on
+tls             on
+logfile         ~/.msmtp_default.log
+
+account         {{ msmtp_account }}
+host            {{ msmtp_host }}
+from            {{ msmtp_from }}
+user            {{ msmtp_user }}
+port            {{ msmtp_port }}
+password        {{ msmtp_password }}

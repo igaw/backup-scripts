@@ -1,0 +1,21 @@
+name: Shell Format
+
+on:
+  push:
+    paths:
+      - '**.sh'
+  pull_request:
+    paths:
+      - '**.sh'
+
+jobs:
+  shfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install shfmt
+        run: sudo apt-get update && sudo apt-get install -y shfmt
+      - name: Run shfmt
+        run: |
+          find . -type f -name '*.sh' ! -path './tests/*' -print0 | xargs -0 shfmt -d

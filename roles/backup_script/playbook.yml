@@ -1,0 +1,10 @@
+---
+- hosts: backup_servers
+  become: true
+  roles:
+    - role: backup_script
+      vars:
+        backup_user: backup
+        msmtp_host: smtp.example.com
+        msmtp_user: backup@example.com
+        msmtp_password: "supersecret"
