@@ -103,7 +103,7 @@ ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$IN
 REMOTE_SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 for unit in backup-sync.service backup-sync.timer; do
 	vlog "Copying $unit to $REMOTE_HOST:$REMOTE_SYSTEMD_DIR/"
-	scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
+	scp "$unit" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
 	# shellcheck disable=SC2029
 	ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_SYSTEMD_DIR/$unit\""
 done
