@@ -108,13 +108,13 @@ ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/zfs
 vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
-scp "$(dirname \"$0\")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
+scp "$(dirname "$0")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
 
 # --- Install .msmtprc for backup user ---
 MSMTP_LOCAL="$(mktemp)"
-cat > "$MSMTP_LOCAL" <<EOF
+cat >"$MSMTP_LOCAL" <<EOF
 defaults
 auth            on
 tls             on
@@ -129,7 +129,8 @@ password        ${MSMTP_PASSWORD}
 EOF
 vlog "Copying .msmtprc to $REMOTE_HOST:$REMOTE_HOME/.msmtprc"
 scp "$MSMTP_LOCAL" root@"$REMOTE_HOST":"$REMOTE_HOME/.msmtprc"
-ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_HOME/.msmtprc\" && chmod 600 \"$REMOTE_HOME/.msmtprc\""
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER $REMOTE_HOME/.msmtprc\" && chmod 600 \"$REMOTE_HOME/.msmtprc\""
 rm -f "$MSMTP_LOCAL"
 
 # --- Create systemd directories on remote ---

@@ -1,6 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Global status variable to track script success
+SCRIPT_STATUS=0
+# Buffer for current run log
+RUN_LOG=""
+# Start time for this run
+RUN_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
+
 # Usage/help function
 usage() {
-		cat <<EOF
+	cat <<EOF
 Usage: $0 [OPTIONS]
 
 Options:
@@ -12,17 +22,6 @@ Environment/configuration is loaded from:
 	[1m${XDG_CONFIG_HOME:-$HOME/.config}/backup-scripts/config[0m
 EOF
 }
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-
-# Global status variable to track script success
-SCRIPT_STATUS=0
-# Buffer for current run log
-RUN_LOG=""
-# Start time for this run
-RUN_START_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
 
 ############################################
 #               CONFIGURATION              #
@@ -39,7 +38,7 @@ fi
 
 # Set BIN_DIR if not set in config
 if [[ -z "${BIN_DIR:-}" ]]; then
-    BIN_DIR="$(dirname "$0")"
+	BIN_DIR="$(dirname "$0")"
 fi
 
 ############################################
@@ -55,28 +54,28 @@ log() {
 }
 
 email_notify() {
-	       local subject="$1"
-	       local body="$2"
+	local subject="$1"
+	local body="$2"
 
-	       [[ -z "${EMAIL_TO}" ]] && return 0
+	[[ -z "${EMAIL_TO}" ]] && return 0
 
-	       # Compose the email
-	       {
-		       echo "From: ${EMAIL_FROM}"
-		       echo "To: ${EMAIL_TO}"
-		       echo "Subject: ${subject}"
-		       echo
-		       echo "$body"
-		       echo
-		       echo "Run started: $RUN_START_TIME"
-		       echo "Run ended:   $(date '+%Y-%m-%d %H:%M:%S')"
-		       echo
-		       echo "Log output for this run:"
-		       echo "----------------------------------------"
-		       # Print only the current run's log
-		       printf "%s" "$RUN_LOG"
-		       echo "----------------------------------------"
-	       } | msmtp --from="${EMAIL_FROM}" "$EMAIL_TO"
+	# Compose the email
+	{
+		echo "From: ${EMAIL_FROM}"
+		echo "To: ${EMAIL_TO}"
+		echo "Subject: ${subject}"
+		echo
+		echo "$body"
+		echo
+		echo "Run started: $RUN_START_TIME"
+		echo "Run ended:   $(date '+%Y-%m-%d %H:%M:%S')"
+		echo
+		echo "Log output for this run:"
+		echo "----------------------------------------"
+		# Print only the current run's log
+		printf "%s" "$RUN_LOG"
+		echo "----------------------------------------"
+	} | msmtp --from="${EMAIL_FROM}" "$EMAIL_TO"
 }
 
 fail_and_exit() {
@@ -90,12 +89,12 @@ fail_and_exit() {
 ############################################
 
 snapshot_has_locks() {
-	       local snap_path="$1"
-	       if [[ ! -d "$snap_path/repos" ]]; then
-		       log "⚠️  Snapshot repo directory missing: $snap_path/repos"
-		       return 1
-	       fi
-	       find "$snap_path/repos" -type f -name 'lock*' | grep -q . || return 1
+	local snap_path="$1"
+	if [[ ! -d "$snap_path/repos" ]]; then
+		log "⚠️  Snapshot repo directory missing: $snap_path/repos"
+		return 1
+	fi
+	find "$snap_path/repos" -type f -name 'lock*' | grep -q . || return 1
 }
 
 rotate_local_snapshots() {
@@ -126,35 +125,35 @@ rotate_local_snapshots() {
 }
 
 create_snapshot() {
-	       local snap_name snap_path
+	local snap_name snap_path
 
-	       if ! btrfs subvolume show "$SNAP_SRC" >/dev/null 2>&1; then
-		       fail_and_exit "SNAP_SRC ($SNAP_SRC) is not a valid Btrfs subvolume."
-	       fi
+	if ! btrfs subvolume show "$SNAP_SRC" >/dev/null 2>&1; then
+		fail_and_exit "SNAP_SRC ($SNAP_SRC) is not a valid Btrfs subvolume."
+	fi
 
-	       for attempt in $(seq 1 "$MAX_RETRIES"); do
-		       snap_name="backup-rsync-$(date +%Y%m%d-%H%M%S)"
-		       snap_path="$SNAP_PARENT/$snap_name"
+	for attempt in $(seq 1 "$MAX_RETRIES"); do
+		snap_name="backup-rsync-$(date +%Y%m%d-%H%M%S)"
+		snap_path="$SNAP_PARENT/$snap_name"
 
-		       log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path"
-		       if ! btrfs subvolume snapshot -r "$SNAP_SRC" "$snap_path" >/dev/null 2>&1; then
-			       log "❌ ERROR: Not a Btrfs subvolume or failed to create snapshot: $SNAP_SRC"
-			       continue
-		       fi
+		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path"
+		if ! btrfs subvolume snapshot -r "$SNAP_SRC" "$snap_path" >/dev/null 2>&1; then
+			log "❌ ERROR: Not a Btrfs subvolume or failed to create snapshot: $SNAP_SRC"
+			continue
+		fi
 
-		       log "🔍 Checking snapshot for Borg locks..."
-		       if snapshot_has_locks "$snap_path"; then
-			       log "🔒 Locks found — removing snapshot and retrying in $RETRY_DELAY seconds."
-			       sudo btrfs subvolume delete "$snap_path" >/dev/null
-			       sleep "$RETRY_DELAY"
-			       continue
-		       fi
+		log "🔍 Checking snapshot for Borg locks..."
+		if snapshot_has_locks "$snap_path"; then
+			log "🔒 Locks found — removing snapshot and retrying in $RETRY_DELAY seconds."
+			sudo btrfs subvolume delete "$snap_path" >/dev/null
+			sleep "$RETRY_DELAY"
+			continue
+		fi
 
-		       echo "$snap_path"
-		       return 0
-	       done
+		echo "$snap_path"
+		return 0
+	done
 
-	       fail_and_exit "Could not create clean Btrfs snapshot after $MAX_RETRIES attempts."
+	fail_and_exit "Could not create clean Btrfs snapshot after $MAX_RETRIES attempts."
 }
 
 ############################################
@@ -249,25 +248,25 @@ run_backup() {
 	local skip_encrypted_tar=0
 	local test_mode=0
 
-	       while [[ $# -gt 0 ]]; do
-		       case "$1" in
-		       --skip-encrypted-tar)
-			       skip_encrypted_tar=1
-			       shift
-			       ;;
-		       --test-mode)
-			       test_mode=1
-			       shift
-			       ;;
-		       -h|--help)
-			       usage
-			       exit 0
-			       ;;
-		       *)
-			       shift
-			       ;;
-		       esac
-	       done
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--skip-encrypted-tar)
+			skip_encrypted_tar=1
+			shift
+			;;
+		--test-mode)
+			test_mode=1
+			shift
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
 
 	log "🚀 Backup started"
 
