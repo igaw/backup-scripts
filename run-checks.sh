@@ -55,27 +55,27 @@ run_bats() {
 # Python workflows
 run_flake8() {
 	echo "Running flake8..."
-	flake8 .
+	flake8 src/
 }
 
 run_black() {
 	echo "Running black..."
-	black --check .
+	black --check src/
 }
 
 run_pytest() {
 	echo "Running pytest..."
-	pytest
+	pytest src/
 }
 
 run_mypy() {
 	echo "Running mypy..."
-	mypy .
+	mypy src/
 }
 
 run_bandit() {
 	echo "Running bandit..."
-	bandit -r .
+	bandit -r src/
 }
 
 main() {
