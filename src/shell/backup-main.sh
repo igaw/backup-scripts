@@ -7,7 +7,6 @@ set -euo pipefail
 TN_HOST="truenas.lan"
 TN_TOKEN=""
 
-SRC_DIR="/home/backup/repos"
 SNAP_PARENT="/home/backup/backup-snapshots"   # Btrfs subvolume parent
 REMOTE_HOST="backup@$TN_HOST"
 REMOTE_BASE="/data/repos"
@@ -87,8 +86,7 @@ rotate_local_snapshots() {
     done
 
     # Sort by creation time (oldest first)
-    IFS=$'\n' sorted=($(sort -n <<<"${snapshots[*]}"))
-    unset IFS
+    mapfile -t sorted < <(printf '%s\n' "${snapshots[@]}" | sort -n)
 
     # Delete older snapshots beyond LOCAL_KEEP
     local total=${#sorted[@]}
@@ -141,7 +139,8 @@ sync_repo() {
 
     log "➡️ Syncing $repo_name → $remote_path"
 
-    ssh $SSH_OPTS "$REMOTE_HOST" "mkdir -p '$remote_path'"
+    # shellcheck disable=SC2029
+    ssh "$SSH_OPTS" "$REMOTE_HOST" "mkdir -p \"$remote_path\""
 
     if ! rsync -a --delete -e "ssh $SSH_OPTS" "$repo/" "$REMOTE_HOST:$remote_path/"; then
         log "⚠️ Rsync FAILED for $repo_name"

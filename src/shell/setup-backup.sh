@@ -44,8 +44,6 @@ REMOTE_HOST="$1"
 BIN_DIR="/home/$INSTALL_USER/bin"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
-SERVICE_FILE="$SYSTEMD_DIR/backup-sync.service"
-TIMER_FILE="$SYSTEMD_DIR/backup-sync.timer"
 LOG_FILE="/home/$INSTALL_USER/backup-sync.log"
 
 # --- Show defaults and confirm ---
@@ -58,7 +56,7 @@ echo "  Bin dir:         $BIN_DIR"
 echo "  Systemd dir:     $SYSTEMD_DIR"
 echo "  Log file:        $LOG_FILE"
 echo
-read -p "Continue with these settings? [y/N]: " confirm
+read -r -p "Continue with these settings? [y/N]: " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Aborted."
     exit 1
@@ -75,25 +73,31 @@ echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on
 
 # --- Copy script to remote server ---
 vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$BIN_DIR/"
-ssh root@"$REMOTE_HOST" "mkdir -p '$BIN_DIR'"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "mkdir -p \"$BIN_DIR\""
 scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$BIN_DIR/"
-ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER '$BIN_DIR/$SCRIPT_NAME' && chmod 700 '$BIN_DIR/$SCRIPT_NAME'"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$BIN_DIR/$SCRIPT_NAME\" && chmod 700 \"$BIN_DIR/$SCRIPT_NAME\""
 
 # --- Create systemd directories on remote ---
 vlog "Creating systemd user dir $SYSTEMD_DIR on $REMOTE_HOST"
-ssh root@"$REMOTE_HOST" "mkdir -p '$SYSTEMD_DIR' && chown -R $INSTALL_USER:$INSTALL_USER '/home/$INSTALL_USER/.config'"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$INSTALL_USER '/home/$INSTALL_USER/.config'"
 
 # --- Copy systemd unit files (assume they exist locally) ---
 for unit in backup-sync.service backup-sync.timer; do
     vlog "Copying $unit to $REMOTE_HOST:$SYSTEMD_DIR/"
     scp "$SYSTEMD_DIR/$unit" root@"$REMOTE_HOST":"$SYSTEMD_DIR/"
-    ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER '$SYSTEMD_DIR/$unit'"
+    # shellcheck disable=SC2029
+    ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$SYSTEMD_DIR/$unit\""
 done
 
 # --- Enable and start timer as the install user ---
 vlog "Enabling and starting timer on $REMOTE_HOST as $INSTALL_USER"
+# shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
-    export XDG_RUNTIME_DIR="/run/user/$(id -u $INSTALL_USER)"
+# shellcheck disable=SC2046
+    export XDG_RUNTIME_DIR=\"/run/user/$(id -u \""$INSTALL_USER"\")\"
     systemctl --user daemon-reload
     systemctl --user enable --now backup-sync.timer
     systemctl --user list-timers --all | grep backup-sync || true
