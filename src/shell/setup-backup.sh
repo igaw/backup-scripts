@@ -99,14 +99,56 @@ ssh root@"$REMOTE_HOST" "mkdir -p \"$SYSTEMD_DIR\" && chown -R $INSTALL_USER:$IN
 
 # --- Copy systemd unit files (assume they exist locally) ---
 
+# --- Create systemd service and timer files in a temporary directory ---
+LOCAL_SYSTEMD_DIR="$(mktemp -d)"
+SERVICE_FILE="$LOCAL_SYSTEMD_DIR/backup-sync.service"
+TIMER_FILE="$LOCAL_SYSTEMD_DIR/backup-sync.timer"
+
+cat >"$SERVICE_FILE" <<EOF
+[Unit]
+Description=Run Borg + Nearlyone backup sync
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=$BIN_DIR/$SCRIPT_NAME
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=no
+StandardOutput=append:$LOG_FILE
+StandardError=append:$LOG_FILE
+EOF
+
+cat >"$TIMER_FILE" <<EOF
+[Unit]
+Description=Daily Borg + Nearlyone backup
+
+[Timer]
+OnCalendar=03:00
+RandomizedDelaySec=900
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target
+EOF
+
 # Use remote systemd dir based on INSTALL_USER
 REMOTE_SYSTEMD_DIR="/home/$INSTALL_USER/.config/systemd/user"
 for unit in backup-sync.service backup-sync.timer; do
+	local_file="$LOCAL_SYSTEMD_DIR/$unit"
 	vlog "Copying $unit to $REMOTE_HOST:$REMOTE_SYSTEMD_DIR/"
-	scp "$unit" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
+	scp "$local_file" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
 	# shellcheck disable=SC2029
 	ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_SYSTEMD_DIR/$unit\""
 done
+
+# Clean up temporary directory
+rm -rf "$LOCAL_SYSTEMD_DIR"
 
 # --- Enable and start timer as the install user ---
 vlog "Enabling and starting timer on $REMOTE_HOST as $INSTALL_USER"
