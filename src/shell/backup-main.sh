@@ -131,7 +131,7 @@ sync_repo() {
 	fi
 }
 
-sync_all_repos() {
+sync_all_borg_repos() {
 	local snap_path="$1"
 	#mapfile -t repos < <(find "$snap_path/repos" -mindepth 2 -maxdepth 2 -type d | sort)
 
@@ -146,25 +146,25 @@ sync_all_repos() {
 #         NEARLYONE ENCRYPTED BACKUP       #
 ############################################
 
-backup_nearlyone() {
-	[[ -d "$NEARLYONE_SRC" ]] || {
-		log "⚠️ nearlyone directory missing — skipping."
+backup_encrypted_tar() {
+	[[ -d "$ENCRYPTED_TAR_SRC" ]] || {
+		log "⚠️ source directory missing — skipping."
 		return
 	}
 
 	[[ -x "$AGE_BIN" ]] || fail_and_exit "age binary not found"
 	[[ -f "$AGE_RECIPIENT_FILE" ]] || fail_and_exit "Missing age recipient file"
 
-	local archive="$HOME/nearlyone.tar.age"
+	local archive="$ENCRYPTED_TAR_ARCHIVE"
 	local recipient
 	recipient=$(cat "$AGE_RECIPIENT_FILE")
 
-	log "🔐 Encrypting nearlyone → $archive"
-	tar cz "$NEARLYONE_SRC" | "$AGE_BIN" -r "$recipient" -o "$archive"
+	log "🔐 Encrypting and archiving → $archive"
+	tar cz "$ENCRYPTED_TAR_SRC" | "$AGE_BIN" -r "$recipient" -o "$archive"
 
-	log "📤 Syncing nearlyone backup..."
-	rsync -av -e "ssh $SSH_OPTS" "$archive" "$NEARLYONE_REMOTE_BASE/" ||
-		log "⚠️ nearlyone rsync failed"
+	log "📤 Syncing encrypted tar backup..."
+	rsync -av -e "ssh $SSH_OPTS" "$archive" "$ENCRYPTED_TAR_REMOTE_BASE/" ||
+		log "⚠️ encrypted tar rsync failed"
 
 	rm -f "$archive"
 }
@@ -204,8 +204,8 @@ run_backup() {
 	snap_path=$(create_snapshot)
 
 	rotate_local_snapshots
-	sync_all_repos "$snap_path"
-	backup_nearlyone
+	sync_all_borg_repos "$snap_path"
+	backup_encrypted_tar
 	create_remote_snapshot
 
 	log "✅ Backup complete"

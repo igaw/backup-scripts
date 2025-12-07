@@ -75,13 +75,11 @@ vlog() {
 
 echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
 
-
 # --- Always use remote /home/$INSTALL_USER for all remote paths ---
 REMOTE_HOME="/home/$INSTALL_USER"
 REMOTE_BIN_DIR="$REMOTE_HOME/.local/bin"
 REMOTE_CONFIG_DIR="$REMOTE_HOME/.config/backup-scripts"
 REMOTE_SYSTEMD_DIR="$REMOTE_HOME/.config/systemd/user"
-
 
 vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$REMOTE_BIN_DIR/"
 # shellcheck disable=SC2029
@@ -181,7 +179,7 @@ echo "🪶 Logs will be written to: $LOG_FILE on $REMOTE_HOST."
 
 # --- Add sudoers file for backup user to allow passwordless btrfs subvolume commands ---
 SUDOERS_TMP="$(mktemp)"
-cat > "$SUDOERS_TMP" <<EOF
+cat >"$SUDOERS_TMP" <<EOF
 $INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete /home/$INSTALL_USER/backup-snapshots/*
 $INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup-snapshots/*
 $INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup/backup-snapshots/*
