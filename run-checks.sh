@@ -70,7 +70,7 @@ run_black() {
 
 run_pytest() {
 	echo "Running pytest..."
-	pytest src/
+	pytest tests/
 }
 
 run_mypy() {
