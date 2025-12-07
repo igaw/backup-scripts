@@ -20,7 +20,7 @@ def ws_call(ws, method, params=None, req_id=1):
         "id": req_id,
         "msg": "method",
         "method": method,
-        "params": params or []
+        "params": params or [],
     }
     ws.send(json.dumps(msg))
     resp = ws.recv()
@@ -36,11 +36,12 @@ def login(ws, token):
 
 def create_snapshot(ws, dataset, snapname):
     print(f"Creating snapshot: {snapname}")
-    resp = ws_call(ws, "pool.snapshot.create", [{
-        "dataset": dataset,
-        "name": snapname,
-        "recursive": True
-    }], req_id=2)
+    resp = ws_call(
+        ws,
+        "pool.snapshot.create",
+        [{"dataset": dataset, "name": snapname, "recursive": True}],
+        req_id=2,
+    )
 
     if "error" in resp:
         print("ERROR:", resp["error"])
@@ -52,12 +53,7 @@ def create_snapshot(ws, dataset, snapname):
 def prune_snapshots(ws, dataset, keep, prefix):
     print(f"Pruning snapshots, keeping last {keep} with prefix '{prefix}'")
 
-    params = [
-        [["dataset", "=", dataset]],
-        {
-            "order_by": ["name"]
-        }
-    ]
+    params = [[["dataset", "=", dataset]], {"order_by": ["name"]}]
 
     resp = ws_call(ws, "pool.snapshot.query", params, req_id=3)
     snapshots = resp.get("result", [])
@@ -85,7 +81,7 @@ def prune_snapshots(ws, dataset, keep, prefix):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-         description="Create and optionally prune TrueNAS ZFS snapshots over WebSocket."  # noqa: E501
+        description="Create and optionally prune TrueNAS ZFS snapshots over WebSocket."  # noqa: E501
     )
 
     parser.add_argument(
@@ -109,13 +105,13 @@ def parse_args():
         "--prune",
         type=int,
         metavar="N",
-        help="Keep only the last N snapshots with the same prefix (default prefix=backup-)"   # noqa: E501
+        help="Keep only the last N snapshots with the same prefix (default prefix=backup-)",  # noqa: E501
     )
 
     parser.add_argument(
         "--prefix",
         default="backup-",
-        help="Prefix used to match snapshots for pruning (default: backup-)"  # noqa: E501
+        help="Prefix used to match snapshots for pruning (default: backup-)",  # noqa: E501
     )
 
     return parser.parse_args()

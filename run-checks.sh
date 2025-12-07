@@ -59,8 +59,13 @@ run_flake8() {
 }
 
 run_black() {
-	echo "Running black..."
-	black --check src/
+	if ((fix_mode)); then
+		echo "Reformatting Python code with black..."
+		black src/
+	else
+		echo "Running black..."
+		black --check src/
+	fi
 }
 
 run_pytest() {
