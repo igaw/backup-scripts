@@ -5,9 +5,7 @@ import ssl
 import sys
 import websocket
 
-# ------------------------------
-# WebSocket Helpers
-# ------------------------------
+
 def ws_connect(host):
     sslopt = {"cert_reqs": ssl.CERT_NONE}
     return websocket.create_connection(
@@ -35,9 +33,7 @@ def login(ws, token):
         print("Login failed:", login["error"])
         sys.exit(1)
 
-# ------------------------------
-# Snapshot Creation
-# ------------------------------
+
 def create_snapshot(ws, dataset, snapname):
     print(f"Creating snapshot: {snapname}")
     resp = ws_call(ws, "pool.snapshot.create", [{
@@ -53,9 +49,6 @@ def create_snapshot(ws, dataset, snapname):
     print("OK:", resp.get("result")["id"])
 
 
-# ------------------------------
-# Pruning
-# ------------------------------
 def prune_snapshots(ws, dataset, keep, prefix):
     print(f"Pruning snapshots, keeping last {keep} with prefix '{prefix}'")
 
@@ -90,12 +83,9 @@ def prune_snapshots(ws, dataset, keep, prefix):
     print("Prune completed.")
 
 
-# ------------------------------
-# CLI using argparse
-# ------------------------------
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Create and optionally prune TrueNAS ZFS snapshots over WebSocket."
+         description="Create and optionally prune TrueNAS ZFS snapshots over WebSocket."  # noqa: E501
     )
 
     parser.add_argument(
@@ -119,21 +109,18 @@ def parse_args():
         "--prune",
         type=int,
         metavar="N",
-        help="Keep only the last N snapshots with the same prefix (default prefix=backup-)"
+        help="Keep only the last N snapshots with the same prefix (default prefix=backup-)"   # noqa: E501
     )
 
     parser.add_argument(
         "--prefix",
         default="backup-",
-        help="Prefix used to match snapshots for pruning (default: backup-)"
+        help="Prefix used to match snapshots for pruning (default: backup-)"  # noqa: E501
     )
 
     return parser.parse_args()
 
 
-# ------------------------------
-# Main
-# ------------------------------
 def main():
     args = parse_args()
 
