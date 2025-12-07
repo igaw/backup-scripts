@@ -152,8 +152,11 @@ create_snapshot() {
 			continue
 		fi
 
-		echo "$snap_path"
-		return 0
+		# Only echo if the snapshot is valid and has no locks
+		if [[ -d "$snap_path" ]]; then
+			echo "$snap_path"
+			return 0
+		fi
 	done
 
 	fail_and_exit "Could not create clean btrfs snapshot after $MAX_RETRIES attempts."
@@ -295,6 +298,11 @@ run_backup() {
 		return 1
 	fi
 	snap_path="$created_snap_path"
+
+	# Only proceed if snap_path is a valid directory
+	if [[ ! -d "$snap_path" ]]; then
+		fail_and_exit "Snapshot creation failed or did not produce a valid directory: $snap_path"
+	fi
 
 	if [[ $test_mode -eq 0 ]]; then
 		rotate_local_snapshots
