@@ -1,3 +1,17 @@
+# Usage/help function
+usage() {
+		cat <<EOF
+Usage: $0 [OPTIONS]
+
+Options:
+	--skip-encrypted-tar   Skip the encrypted tar backup step
+	--test-mode            Run in test mode (no rotation, creates and deletes a test snapshot)
+	-h, --help             Show this help message and exit
+
+Environment/configuration is loaded from: 
+	[1m${XDG_CONFIG_HOME:-$HOME/.config}/backup-scripts/config[0m
+EOF
+}
 #!/usr/bin/env bash
 
 set -euo pipefail
@@ -202,21 +216,26 @@ create_remote_snapshot() {
 run_backup() {
 	local skip_encrypted_tar=0
 	local test_mode=0
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-		--skip-encrypted-tar)
-			skip_encrypted_tar=1
-			shift
-			;;
-		--test-mode)
-			test_mode=1
-			shift
-			;;
-		*)
-			shift
-			;;
-		esac
-	done
+
+	       while [[ $# -gt 0 ]]; do
+		       case "$1" in
+		       --skip-encrypted-tar)
+			       skip_encrypted_tar=1
+			       shift
+			       ;;
+		       --test-mode)
+			       test_mode=1
+			       shift
+			       ;;
+		       -h|--help)
+			       usage
+			       exit 0
+			       ;;
+		       *)
+			       shift
+			       ;;
+		       esac
+	       done
 
 	log "🚀 Backup started"
 
