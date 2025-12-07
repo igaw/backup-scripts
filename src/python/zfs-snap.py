@@ -8,10 +8,7 @@ import websocket
 
 def ws_connect(host):
     sslopt = {"cert_reqs": ssl.CERT_NONE}
-    return websocket.create_connection(
-        f"wss://{host}/api/current",
-        sslopt=sslopt
-    )
+    return websocket.create_connection(f"wss://{host}/api/current", sslopt=sslopt)
 
 
 def ws_call(ws, method, params=None, req_id=1):
@@ -85,8 +82,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "snapname",
-        help="Snapshot name to create (e.g. backup-2025-11-23_12-01)"
+        "snapname", help="Snapshot name to create (e.g. backup-2025-11-23_12-01)"
     )
 
     parser.add_argument(

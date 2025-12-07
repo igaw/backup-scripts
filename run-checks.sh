@@ -55,7 +55,7 @@ run_bats() {
 # Python workflows
 run_flake8() {
 	echo "Running flake8..."
-	flake8 src/
+	flake8 --config=.flake8 src/
 }
 
 run_black() {
