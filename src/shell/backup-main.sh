@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
+
+# Global status variable to track script success
+SCRIPT_STATUS=0
 
 ############################################
 #               CONFIGURATION              #
@@ -40,9 +44,10 @@ email_notify() {
 	} | msmtp --from="${EMAIL_FROM}" "$EMAIL_TO"
 }
 
+
 fail_and_exit() {
 	log "❌ ERROR: $*"
-	email_notify "$EMAIL_SUBJECT_FAIL" "$*"
+	SCRIPT_STATUS=1
 	exit 1
 }
 
@@ -195,68 +200,69 @@ create_remote_snapshot() {
 #                 MAIN                     #
 ############################################
 
+
 run_backup() {
-	local skip_encrypted_tar=0
-	local test_mode=0
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-			--skip-encrypted-tar)
-				skip_encrypted_tar=1
-				shift
-				;;
-			--test-mode)
-				test_mode=1
-				shift
-				;;
-			*)
-				shift
-				;;
-		esac
-	done
+       local skip_encrypted_tar=0
+       local test_mode=0
+       while [[ $# -gt 0 ]]; do
+	       case "$1" in
+		       --skip-encrypted-tar)
+			       skip_encrypted_tar=1
+			       shift
+			       ;;
+		       --test-mode)
+			       test_mode=1
+			       shift
+			       ;;
+		       *)
+			       shift
+			       ;;
+	       esac
+       done
 
-	log "🚀 Backup started"
+       log "🚀 Backup started"
 
-	mkdir -p "$SNAP_PARENT"
+       mkdir -p "$SNAP_PARENT"
 
+       local snap_path
+       snap_path=""
 
-	local snap_path
-	snap_path=""
+       if [[ $test_mode -eq 1 ]]; then
+	       cleanup_snapshot() {
+		       if [[ -n "$snap_path" && -d "$snap_path" ]]; then
+			       log "🧹 Cleaning up test snapshot: $snap_path"
+			       sudo btrfs subvolume delete "$snap_path" >/dev/null || true
+		       fi
+	       }
+	       trap cleanup_snapshot EXIT INT TERM
+       fi
 
-	if [[ $test_mode -eq 1 ]]; then
-		cleanup_snapshot() {
-			if [[ -n "$snap_path" && -d "$snap_path" ]]; then
-				log "🧹 Cleaning up test snapshot: $snap_path"
-				sudo btrfs subvolume delete "$snap_path" >/dev/null || true
-			fi
-		}
-		trap cleanup_snapshot EXIT INT TERM
-	fi
+       snap_path=$(create_snapshot)
 
-	snap_path=$(create_snapshot)
+       if [[ $test_mode -eq 0 ]]; then
+	       rotate_local_snapshots
+       fi
 
-	if [[ $test_mode -eq 0 ]]; then
-		rotate_local_snapshots
-	fi
+       sync_all_borg_repos "$snap_path"
+       if [[ $skip_encrypted_tar -eq 0 ]]; then
+	       backup_encrypted_tar
+       else
+	       log "🔕 Skipping encrypted tar backup step (--skip-encrypted-tar)"
+       fi
+       create_remote_snapshot
 
-	sync_all_borg_repos "$snap_path"
-	if [[ $skip_encrypted_tar -eq 0 ]]; then
-		backup_encrypted_tar
-	else
-		log "🔕 Skipping encrypted tar backup step (--skip-encrypted-tar)"
-	fi
-	create_remote_snapshot
+       if [[ $test_mode -eq 1 ]]; then
+	       cleanup_snapshot
+	       trap - EXIT INT TERM
+       fi
 
-	if [[ $test_mode -eq 1 ]]; then
-		cleanup_snapshot
-		trap - EXIT INT TERM
-	fi
-
-	log "✅ Backup complete"
-	email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."
-
-	return 0
+       log "✅ Backup complete"
+       SCRIPT_STATUS=0
+       return 0
 }
 
-#email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."
+
+# Trap to always send an email on script exit
+trap 'if [[ $SCRIPT_STATUS -eq 0 ]]; then email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."; else email_notify "$EMAIL_SUBJECT_FAIL" "Backup failed. See logs for details."; fi' EXIT
 
 run_backup "$@"
