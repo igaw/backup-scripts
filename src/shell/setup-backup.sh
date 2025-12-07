@@ -82,12 +82,20 @@ REMOTE_BIN_DIR="$REMOTE_HOME/.local/bin"
 REMOTE_CONFIG_DIR="$REMOTE_HOME/.config/backup-scripts"
 REMOTE_SYSTEMD_DIR="$REMOTE_HOME/.config/systemd/user"
 
+
 vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$REMOTE_BIN_DIR/"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_BIN_DIR\""
 scp "$SCRIPT_PATH" root@"$REMOTE_HOST":"$REMOTE_BIN_DIR/"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/$SCRIPT_NAME\" && chmod 700 \"$REMOTE_BIN_DIR/$SCRIPT_NAME\""
+
+# --- Also copy zfs-snap.py to remote bin dir ---
+ZFS_SNAP_SRC="$(dirname "$0")/../../src/python/zfs-snap.py"
+vlog "Copying zfs-snap.py to $REMOTE_HOST:$REMOTE_BIN_DIR/"
+scp "$ZFS_SNAP_SRC" root@"$REMOTE_HOST":"$REMOTE_BIN_DIR/"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/zfs-snap.py\" && chmod 700 \"$REMOTE_BIN_DIR/zfs-snap.py\""
 
 # --- Copy config to remote XDG_CONFIG_HOME ---
 vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
