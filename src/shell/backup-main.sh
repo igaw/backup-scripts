@@ -135,9 +135,10 @@ create_snapshot() {
 	for attempt in $(seq 1 "$MAX_RETRIES"); do
 		snap_name="backup-rsync-$(date +%Y%m%d-%H%M%S)"
 		snap_path="$SNAP_PARENT/$snap_name"
+		snap_source="/backup"
 
 		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
-		if ! btrfs subvolume snapshot -r "$HOME" "$snap_path" >/dev/null 2>&1; then
+		if ! btrfs subvolume snapshot -r "$snap_source" "$snap_path" >/dev/null 2>&1; then
 			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $HOME" >&2
 			continue
 		fi
