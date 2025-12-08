@@ -137,9 +137,18 @@ create_snapshot() {
 		snap_path="$SNAP_PARENT/$snap_name"
 		snap_source="/backup"
 
+		# Check if snap_source is a btrfs subvolume
+		if ! sudo btrfs subvolume show "$snap_source" >/dev/null 2>&1; then
+			log "snap_source $snap_source is not a btrfs subvolume. Creating one at $SNAP_PARENT/backup."
+			if [[ ! -d "$SNAP_PARENT/backup" ]]; then
+				sudo btrfs subvolume create "$SNAP_PARENT/backup"
+			fi
+			snap_source="$SNAP_PARENT/backup"
+		fi
+
 		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
 		if ! btrfs subvolume snapshot -r "$snap_source" "$snap_path" >/dev/null 2>&1; then
-			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $HOME" >&2
+			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $snap_source" >&2
 			continue
 		fi
 
