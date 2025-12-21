@@ -58,7 +58,7 @@ SCRIPT_PATH="${SCRIPT_PATH:-src/shell/archive.sh}"
 BIN_DIR="${BIN_DIR:-/home/$INSTALL_USER/.local/bin}"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 SYSTEMD_DIR="${SYSTEMD_DIR:-$XDG_CONFIG_HOME/systemd/user}"
-LOG_FILE="${LOG_FILE:-/home/$INSTALL_USER/archive.log}"
+LOG_FILE="${LOG_FILE:-/home/$INSTALL_USER/.cache/archive.log}"
 
 # --- Show defaults and confirm ---
 echo "Configuration:"
@@ -111,6 +111,15 @@ ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
 scp "$(dirname "$0")/../../archive.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
+
+# --- Create .cache dir
+vlog "Ensure log directory exits"
+# shellcheck disable=SC2086
+REMOTE_LOG_DIR="$(dirname $LOG_FILE)"
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_LOG_DIR\""
+# shellcheck disable=SC2029
+ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_LOG_DIR\""
 
 # --- Install .msmtprc for backup user ---
 MSMTP_LOCAL="$(mktemp)"
