@@ -7,5 +7,5 @@ msmtp_from: backup@example.com
 msmtp_user: backup@example.com
 msmtp_port: 587
 msmtp_password: "changeme"
-backup_timer: "03:00"
-backup_logfile: "{{ backup_home }}/backup-sync.log"
+archive_timer: "03:00"
+archive_logfile: "{{ backup_home }}/archive.log"

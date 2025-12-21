@@ -52,13 +52,13 @@ REMOTE_HOST="$1"
 # --- Configuration ---
 # Use XDG_CONFIG_HOME or fallback to ~/.config
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/home/$INSTALL_USER/.config}"
-SCRIPT_PATH="${SCRIPT_PATH:-src/shell/backup-main.sh}"
+SCRIPT_PATH="${SCRIPT_PATH:-src/shell/archive.sh}"
 
 # Set defaults, allow override from project.conf
 BIN_DIR="${BIN_DIR:-/home/$INSTALL_USER/.local/bin}"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH")"
 SYSTEMD_DIR="${SYSTEMD_DIR:-$XDG_CONFIG_HOME/systemd/user}"
-LOG_FILE="${LOG_FILE:-/home/$INSTALL_USER/backup-sync.log}"
+LOG_FILE="${LOG_FILE:-/home/$INSTALL_USER/archive.log}"
 
 # --- Show defaults and confirm ---
 echo "Configuration:"
@@ -82,12 +82,12 @@ vlog() {
 	fi
 }
 
-echo "🔧 Installing backup script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
+echo "🔧 Installing archive script and systemd timer for user: $INSTALL_USER on $REMOTE_HOST"
 
 # --- Always use remote /home/$INSTALL_USER for all remote paths ---
 REMOTE_HOME="/home/$INSTALL_USER"
 REMOTE_BIN_DIR="$REMOTE_HOME/.local/bin"
-REMOTE_CONFIG_DIR="$REMOTE_HOME/.config/backup-scripts"
+REMOTE_CONFIG_DIR="$REMOTE_HOME/.config/archive"
 REMOTE_SYSTEMD_DIR="$REMOTE_HOME/.config/systemd/user"
 
 vlog "Copying $SCRIPT_NAME from $SCRIPT_PATH to $REMOTE_HOST:$REMOTE_BIN_DIR/"
@@ -108,7 +108,7 @@ ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_BIN_DIR/zfs
 vlog "Copying project.conf to $REMOTE_HOST:$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_CONFIG_DIR\""
-scp "$(dirname "$0")/../../backup-main.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
+scp "$(dirname "$0")/../../archive.conf" root@"$REMOTE_HOST":"$REMOTE_CONFIG_DIR/config"
 # shellcheck disable=SC2029
 ssh root@"$REMOTE_HOST" "chown $INSTALL_USER:$INSTALL_USER \"$REMOTE_CONFIG_DIR/config\""
 
@@ -142,12 +142,12 @@ ssh root@"$REMOTE_HOST" "mkdir -p \"$REMOTE_SYSTEMD_DIR\" && chown -R $INSTALL_U
 
 # --- Create systemd service and timer files in a temporary directory ---
 LOCAL_SYSTEMD_DIR="$(mktemp -d)"
-SERVICE_FILE="$LOCAL_SYSTEMD_DIR/backup-sync.service"
-TIMER_FILE="$LOCAL_SYSTEMD_DIR/backup-sync.timer"
+SERVICE_FILE="$LOCAL_SYSTEMD_DIR/archive.service"
+TIMER_FILE="$LOCAL_SYSTEMD_DIR/archive.timer"
 
 cat >"$SERVICE_FILE" <<EOF
 [Unit]
-Description=Run Backup Scripts
+Description=Run Archive Scripts
 Wants=network-online.target
 After=network-online.target
 
@@ -166,7 +166,7 @@ EOF
 
 cat >"$TIMER_FILE" <<EOF
 [Unit]
-Description=Daily BAckup Scripts Execution
+Description=Daily Archive Scripts Execution
 
 [Timer]
 OnCalendar=03:00
@@ -179,7 +179,7 @@ WantedBy=timers.target
 EOF
 
 # Use remote systemd dir based on INSTALL_USER
-for unit in backup-sync.service backup-sync.timer; do
+for unit in archive.service archive.timer; do
 	local_file="$LOCAL_SYSTEMD_DIR/$unit"
 	vlog "Copying $unit to $REMOTE_HOST:$REMOTE_SYSTEMD_DIR/"
 	scp "$local_file" root@"$REMOTE_HOST":"$REMOTE_SYSTEMD_DIR/"
@@ -200,21 +200,21 @@ ssh root@"$REMOTE_HOST" "sudo -u $INSTALL_USER bash -c '
 # shellcheck disable=SC2046,SC2086
 	export XDG_RUNTIME_DIR=\"/run/user/$REMOTE_UID\"
 	systemctl --user daemon-reload
-	systemctl --user enable --now backup-sync.timer
-	systemctl --user list-timers --all | grep backup-sync || true
+	systemctl --user enable --now archive.timer
+	systemctl --user list-timers --all | grep archive || true
 '"
 
-echo "✅ Backup script and systemd units installed and timer enabled on $REMOTE_HOST."
+echo "✅ Archive script and systemd units installed and timer enabled on $REMOTE_HOST."
 echo "🪶 Logs will be written to: $LOG_FILE on $REMOTE_HOST."
 
 # --- Add sudoers file for backup user to allow passwordless btrfs subvolume commands ---
 SUDOERS_TMP="$(mktemp)"
 cat >"$SUDOERS_TMP" <<EOF
-$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete /home/$INSTALL_USER/backup/backup-snapshots/*
-$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup/backup-snapshots/*
-$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume create /home/$INSTALL_USER/backup/backup-snapshots
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume delete /home/$INSTALL_USER/backup/archive-snapshots/*
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume show /home/$INSTALL_USER/backup/archive-snapshots/*
+$INSTALL_USER ALL=(ALL) NOPASSWD: /usr/bin/btrfs subvolume create /home/$INSTALL_USER/backup/archive-snapshots
 EOF
 echo "Installing sudoers file for $INSTALL_USER on $REMOTE_HOST..."
-scp "$SUDOERS_TMP" root@"$REMOTE_HOST":/etc/sudoers.d/backup-snapshots
-ssh root@"$REMOTE_HOST" "chmod 0440 /etc/sudoers.d/backup-snapshots"
+scp "$SUDOERS_TMP" root@"$REMOTE_HOST":/etc/sudoers.d/archive-snapshots
+ssh root@"$REMOTE_HOST" "chmod 0440 /etc/sudoers.d/archive-snapshots"
 rm -f "$SUDOERS_TMP"

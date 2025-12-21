@@ -14,12 +14,12 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Options:
-	--skip-encrypted-tar   Skip the encrypted tar backup step
+	--skip-encrypted-tar   Skip the encrypted tar archivingd step
 	--test-mode            Run in test mode (no rotation, creates and deletes a test snapshot)
 	-h, --help             Show this help message and exit
 
 Environment/configuration is loaded from:
-	[1m${XDG_CONFIG_HOME:-$HOME/.config}/backup-scripts/config[0m
+	[1m${XDG_CONFIG_HOME:-$HOME/.config}/archive/config[0m
 EOF
 }
 
@@ -27,7 +27,7 @@ EOF
 #               CONFIGURATION              #
 ############################################
 # Source config from XDG_CONFIG_HOME or fallback to ~/.config
-CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/backup-scripts/config"
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/archive/config"
 if [[ -f "$CONFIG_FILE" ]]; then
 	# shellcheck source=/dev/null
 	source "$CONFIG_FILE"
@@ -92,7 +92,7 @@ fail_and_exit() {
 snapshot_has_locks() {
 	local snap_path="$1"
 	if [[ ! -d "$snap_path/repos" ]]; then
-		log "⚠️  Snapshot repo directory missing: $snap_path/repos"
+		log "Snapshot repo directory missing: $snap_path/repos"
 		return 1
 	fi
 	find "$snap_path/repos" -type f -name 'lock*' | grep -q . || return 1
@@ -101,7 +101,7 @@ snapshot_has_locks() {
 rotate_local_snapshots() {
 	# Build an array of snapshots with creation timestamps
 	local snapshots=()
-	for snap in "$SNAP_PARENT"/backup-rsync-*; do
+	for snap in "$SNAP_PARENT"/archive-rsync-*; do
 		[[ -d "$snap" ]] || continue
 		local ctime
 		ctime=$(sudo btrfs subvolume show "$snap" | awk -F': ' '/Creation time/ {print $2}')
@@ -120,7 +120,7 @@ rotate_local_snapshots() {
 
 	for ((i = 0; i < to_delete; i++)); do
 		old_snap=${sorted[i]#* } # remove epoch prefix
-		log "🧹 Removing old local snapshot: $old_snap"
+		log "Removing old local snapshot: $old_snap"
 		sudo btrfs subvolume delete "$old_snap" >/dev/null || true
 	done
 }
@@ -133,18 +133,18 @@ create_snapshot() {
 	fi
 
 	for attempt in $(seq 1 "$MAX_RETRIES"); do
-		snap_name="backup-rsync-$(date +%Y%m%d-%H%M%S)"
+		snap_name="archive-rsync-$(date +%Y%m%d-%H%M%S)"
 		snap_path="$SNAP_PARENT/$snap_name"
 
-		log "📸 [Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
+		log "[Attempt $attempt/$MAX_RETRIES] Creating Btrfs snapshot → $snap_path" >&2
 		if ! btrfs subvolume snapshot -r "$SNAP_SOURCE" "$snap_path" >/dev/null 2>&1; then
-			log "❌ ERROR: Not a btrfs subvolume or failed to create snapshot: $snap_path" >&2
+			log "ERROR: Not a btrfs subvolume or failed to create snapshot: $snap_path" >&2
 			continue
 		fi
 
-		log "🔍 Checking snapshot for Borg locks..." >&2
+		log "Checking snapshot for Borg locks..." >&2
 		if snapshot_has_locks "$snap_path"; then
-			log "🔒 Locks found — removing snapshot and retrying in $RETRY_DELAY seconds." >&2
+			log "Locks found — removing snapshot and retrying in $RETRY_DELAY seconds." >&2
 			sudo btrfs subvolume delete "$snap_path" >/dev/null
 			sleep "$RETRY_DELAY"
 			continue
@@ -169,15 +169,15 @@ sync_repo() {
 	repo_name=$(realpath --relative-to="$snap_path/repos" "$repo")
 	remote_path="$REMOTE_BASE/$repo_name"
 
-	log "➡️ Syncing $repo_name → $remote_path"
+	log "Syncing $repo_name → $remote_path"
 
 	# shellcheck disable=SC2029,SC2086
 	ssh $SSH_OPTS "$REMOTE_HOST" "mkdir -p \"$remote_path\""
 
 	if ! rsync -a --delete -e "ssh $SSH_OPTS" "$repo/" "$REMOTE_HOST:$remote_path/"; then
-		log "⚠️ Rsync FAILED for $repo_name"
+		log "Rsync FAILED for $repo_name"
 	else
-		log "✔️ Repo synced: $repo_name"
+		log "Repo synced: $repo_name"
 	fi
 }
 
@@ -193,12 +193,12 @@ sync_all_borg_repos() {
 }
 
 ############################################
-#         NEARLYONE ENCRYPTED BACKUP       #
+#         NEARLYONE ENCRYPTED ARCHIVING    #
 ############################################
 
-backup_encrypted_tar() {
+archive_encrypted_tar() {
 	[[ -d "$ENCRYPTED_TAR_SRC" ]] || {
-		log "⚠️ source directory missing — skipping."
+		log "Source directory missing — skipping."
 		return
 	}
 
@@ -209,12 +209,12 @@ backup_encrypted_tar() {
 	local recipient
 	recipient=$(cat "$AGE_RECIPIENT_FILE")
 
-	log "🔐 Encrypting and archiving → $archive"
+	log "Encrypting and archiving - $archive"
 	tar cz "$ENCRYPTED_TAR_SRC" | "$AGE_BIN" -r "$recipient" -o "$archive"
 
-	log "📤 Syncing encrypted tar backup..."
+	log "Syncing encrypted tar..."
 	rsync -av -e "ssh $SSH_OPTS" "$archive" "$ENCRYPTED_TAR_REMOTE_BASE/" ||
-		log "⚠️ encrypted tar rsync failed"
+		log "encrypted tar rsync failed"
 
 	rm -f "$archive"
 }
@@ -224,7 +224,7 @@ create_remote_snapshot() {
 	local KEEP=7
 	local DATASET="pool/archive"
 
-	log "📸 Creating remote ZFS snapshot on TrueNAS..."
+	log "Creating remote ZFS snapshot on TrueNAS..."
 
 	if python3 "$BIN_DIR/zfs-snap.py" \
 		--host "$TN_HOST" \
@@ -233,9 +233,9 @@ create_remote_snapshot() {
 		--prefix "$PREFIX" \
 		--prune "$KEEP" \
 		"${PREFIX}$(date +%Y-%m-%d_%H-%M-%S)"; then
-		log "✔️ Remote ZFS snapshot created and pruned successfully."
+		log "Remote ZFS snapshot created and pruned successfully."
 	else
-		log "⚠️ Remote snapshot failed."
+		log "Remote snapshot failed."
 		# The backup continues, but you can uncomment this if you want:
 		# fail_and_exit "Failed to create remote ZFS snapshot"
 	fi
@@ -245,7 +245,7 @@ create_remote_snapshot() {
 #                 MAIN                     #
 ############################################
 
-run_backup() {
+run_archive() {
 	local skip_encrypted_tar=0
 	local test_mode=0
 
@@ -269,7 +269,7 @@ run_backup() {
 		esac
 	done
 
-	log "🚀 Backup started"
+	log "Archiving started"
 
 	# Declare snap_path as global for use in cleanup_snapshot
 	global_snap_path=""
@@ -277,7 +277,7 @@ run_backup() {
 	if [[ $test_mode -eq 1 ]]; then
 		cleanup_snapshot() {
 			if [[ -n "$global_snap_path" && -d "$global_snap_path" ]]; then
-				log "🧹 Cleaning up test snapshot: $global_snap_path"
+				log "Cleaning up test snapshot: $global_snap_path"
 				sudo btrfs subvolume delete "$global_snap_path" >/dev/null || true
 			fi
 		}
@@ -294,9 +294,9 @@ run_backup() {
 
 	sync_all_borg_repos "$global_snap_path"
 	if [[ $skip_encrypted_tar -eq 0 ]]; then
-		backup_encrypted_tar
+		archive_encrypted_tar
 	else
-		log "🔕 Skipping encrypted tar backup step (--skip-encrypted-tar)"
+		log "Skipping encrypted tar archiving step (--skip-encrypted-tar)"
 	fi
 	create_remote_snapshot
 
@@ -305,12 +305,12 @@ run_backup() {
 		trap - EXIT INT TERM
 	fi
 
-	log "✅ Backup complete"
+	log "Archiving complete"
 	SCRIPT_STATUS=0
 	return 0
 }
 
 # Trap to always send an email on script exit
-trap 'if [[ $SCRIPT_STATUS -eq 0 ]]; then email_notify "$EMAIL_SUBJECT_OK" "Backup completed successfully."; else email_notify "$EMAIL_SUBJECT_FAIL" "Backup failed. See logs for details."; fi' EXIT
+trap 'if [[ $SCRIPT_STATUS -eq 0 ]]; then email_notify "$EMAIL_SUBJECT_OK" "Archiving completed successfully."; else email_notify "$EMAIL_SUBJECT_FAIL" "Archiving failed. See logs for details."; fi' EXIT
 
-run_backup "$@"
+run_archive "$@"

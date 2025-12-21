@@ -15,14 +15,14 @@
     mode: '0700'
   loop:
     - "{{ backup_home }}/.local/bin"
-    - "{{ backup_home }}/.config/backup-scripts"
+    - "{{ backup_home }}/.config/archive"
     - "{{ backup_home }}/.config/systemd/user"
-    - "{{ backup_home }}/backup/backup-snapshots"
+    - "{{ backup_home }}/backup/archive-snapshots"
 
-- name: Copy backup script
+- name: Copy archive script
   ansible.builtin.copy:
-    src: backup-main.sh
-    dest: "{{ backup_home }}/.local/bin/backup-main.sh"
+    src: archive.sh
+    dest: "{{ backup_home }}/.local/bin/archive.sh"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
     mode: '0700'
@@ -35,10 +35,10 @@
     group: "{{ backup_user }}"
     mode: '0700'
 
-- name: Copy backup config
+- name: Copy archive config
   ansible.builtin.copy:
-    src: backup-main.conf
-    dest: "{{ backup_home }}/.config/backup-scripts/config"
+    src: archive.conf
+    dest: "{{ backup_home }}/.config/archive/config"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
     mode: '0600'
@@ -53,16 +53,16 @@
 
 - name: Deploy systemd service
   ansible.builtin.template:
-    src: backup-sync.service.j2
-    dest: "{{ backup_home }}/.config/systemd/user/backup-sync.service"
+    src: archive.service.j2
+    dest: "{{ backup_home }}/.config/systemd/user/archive.service"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
     mode: '0644'
 
 - name: Deploy systemd timer
   ansible.builtin.template:
-    src: backup-sync.timer.j2
-    dest: "{{ backup_home }}/.config/systemd/user/backup-sync.timer"
+    src: archive.timer.j2
+    dest: "{{ backup_home }}/.config/systemd/user/archive.timer"
     owner: "{{ backup_user }}"
     group: "{{ backup_user }}"
     mode: '0644'
@@ -70,7 +70,7 @@
 - name: Install sudoers file for btrfs commands
   ansible.builtin.template:
     src: sudoers_btrfs.j2
-    dest: "/etc/sudoers.d/backup-snapshots"
+    dest: "/etc/sudoers.d/archive-snapshots"
     owner: root
     group: root
     mode: '0440'
@@ -90,9 +90,9 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ lookup('ansible.builtin.pipe', 'id -u ' + backup_user) }}"
 
-- name: Enable and start backup timer
+- name: Enable and start archive timer
   ansible.builtin.systemd:
-    name: backup-sync.timer
+    name: archive.timer
     enabled: true
     state: started
     scope: user
