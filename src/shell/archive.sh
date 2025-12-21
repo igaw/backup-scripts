@@ -169,15 +169,15 @@ sync_repo() {
 	repo_name=$(realpath --relative-to="$snap_path/repos" "$repo")
 	remote_path="$REMOTE_BASE/$repo_name"
 
-	log "Syncing $repo_name → $remote_path"
+	log "Syncing $repo_name"
 
 	# shellcheck disable=SC2029,SC2086
 	ssh $SSH_OPTS "$REMOTE_HOST" "mkdir -p \"$remote_path\""
 
 	if ! rsync -a --delete -e "ssh $SSH_OPTS" "$repo/" "$REMOTE_HOST:$remote_path/"; then
-		log "Rsync FAILED for $repo_name"
+		log "  rsync FAILED"
 	else
-		log "Repo synced: $repo_name"
+		log "  rsync successful"
 	fi
 }
 
