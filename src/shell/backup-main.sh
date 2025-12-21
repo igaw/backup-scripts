@@ -49,7 +49,7 @@ log() {
 	local t
 	t=$(date '+%Y-%m-%d %H:%M:%S')
 	local line="$t  $*"
-	echo "$line" | tee -a "$LOGFILE"
+	echo "$line"
 	RUN_LOG+="$line\n"
 }
 
