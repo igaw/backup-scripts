@@ -14,7 +14,7 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Options:
-	--skip-encrypted-tar   Skip the encrypted tar archivingd step
+	--skip-tar             Skip the encrypted tar archivingd step
 	--test-mode            Run in test mode (no rotation, creates and deletes a test snapshot)
 	-h, --help             Show this help message and exit
 
@@ -196,8 +196,8 @@ sync_all_borg_repos() {
 #         NEARLYONE ENCRYPTED ARCHIVING    #
 ############################################
 
-archive_encrypted_tar() {
-	[[ -d "$ENCRYPTED_TAR_SRC" ]] || {
+archive_tar() {
+	[[ -d "$TAR_SRC" ]] || {
 		log "Source directory missing — skipping."
 		return
 	}
@@ -205,15 +205,15 @@ archive_encrypted_tar() {
 	[[ -x "$AGE_BIN" ]] || fail_and_exit "age binary not found"
 	[[ -f "$AGE_RECIPIENT_FILE" ]] || fail_and_exit "Missing age recipient file"
 
-	local archive="$ENCRYPTED_TAR_ARCHIVE"
+	local archive="$TAR_ARCHIVE"
 	local recipient
 	recipient=$(cat "$AGE_RECIPIENT_FILE")
 
 	log "Encrypting and archiving - $archive"
-	tar cz "$ENCRYPTED_TAR_SRC" | "$AGE_BIN" -r "$recipient" -o "$archive"
+	tar cz "$TAR_SRC" | "$AGE_BIN" -r "$recipient" -o "$archive"
 
 	log "Syncing encrypted tar..."
-	rsync -av -e "ssh $SSH_OPTS" "$archive" "$ENCRYPTED_TAR_REMOTE_BASE/" ||
+	rsync -av -e "ssh $SSH_OPTS" "$archive" "$TAR_REMOTE_BASE/" ||
 		log "encrypted tar rsync failed"
 
 	rm -f "$archive"
@@ -246,13 +246,13 @@ create_remote_snapshot() {
 ############################################
 
 run_archive() {
-	local skip_encrypted_tar=0
+	local skip_tar=0
 	local test_mode=0
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--skip-encrypted-tar)
-			skip_encrypted_tar=1
+		--skip-tar)
+			skip_tar=1
 			shift
 			;;
 		--test-mode)
@@ -293,10 +293,10 @@ run_archive() {
 	fi
 
 	sync_all_borg_repos "$global_snap_path"
-	if [[ $skip_encrypted_tar -eq 0 ]]; then
-		archive_encrypted_tar
+	if [[ $skip_tar -eq 0 ]]; then
+		archive_tar
 	else
-		log "Skipping encrypted tar archiving step (--skip-encrypted-tar)"
+		log "Skipping encrypted tar archiving step (--skip-tar)"
 	fi
 	create_remote_snapshot
 
